@@ -30,25 +30,27 @@ class LightElementNode extends LightNode {
         this.closingType = closingType; // 'single' або 'pair'
         this.cssClasses = cssClasses;
         this.children = [];
+
+        this.state = new VisibleState();
     }
 
     addChild(node) {
         this.children.push(node);
     }
 
+    setState(state) {
+        this.state = state;
+    }
+
     get innerHTML() {
         return this.children.map(child => child.outerHTML).join('');
     }
 
+    // Використовуємо стан для генерації outerHTML
     get outerHTML() {
-        const classes = this.cssClasses.length ? ` class="${this.cssClasses.join(' ')}"` : '';
-
-        if (this.closingType === 'single') {
-            return `<${this.tagName}${classes}/>`;
-        }
-
-        return `<${this.tagName}${classes}>\n  ${this.innerHTML}\n</${this.tagName}>`;
+        return this.state.render(this);
     }
+
 
     onCreated() {
         console.log(`[Hook]: Елемент <${this.tagName}> створено.`);
@@ -90,7 +92,7 @@ class LightElementNode extends LightNode {
     }
 }
 
-    // Відвідувач
+// Відвідувач
 class TagCounterVisitor {
     constructor() {
         this.count = 0;
@@ -102,6 +104,31 @@ class TagCounterVisitor {
 
     visitTextNode(node) {
         // Нічо не робимо
+    }
+}
+
+// Базовий клас стану
+class VisibilityState {
+    render(node) {
+        throw new Error("Метод render() має бути реалізований");
+    }
+}
+
+// Стан 1: Видимий
+class VisibleState extends VisibilityState {
+    render(node) {
+        const classes = node.cssClasses.length ? ` class="${node.cssClasses.join(' ')}"` : '';
+        if (node.closingType === 'single') {
+            return `<${node.tagName}${classes}/>`;
+        }
+        return `<${node.tagName}${classes}>\n  ${node.innerHTML}\n</${node.tagName}>`;
+    }
+}
+
+// Стан 2: Прихований
+class HiddenState extends VisibilityState {
+    render(node) {
+        return ``;
     }
 }
 
@@ -138,3 +165,9 @@ const counterVisitor = new TagCounterVisitor();
 
 ul.accept(counterVisitor);
 console.log(`Кількість знайдених тегів у дереві: ${counterVisitor.count}`);
+
+
+console.log("\nСтан: Приховуємо перший пункт списку");
+li1.setState(new HiddenState());
+
+console.log(ul.renderFull());
