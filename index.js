@@ -38,6 +38,11 @@ class LightElementNode extends LightNode {
         this.children.push(node);
     }
 
+    // Патерн "Команда" для видалення останньої дитини
+    removeChild() {
+        return this.children.pop();
+    }
+
     setState(state) {
         this.state = state;
     }
@@ -132,6 +137,31 @@ class HiddenState extends VisibilityState {
     }
 }
 
+// Базовий клас команди
+class Command {
+    execute() { throw new Error("Метод execute() має бути реалізований"); }
+    undo() { throw new Error("Метод undo() має бути реалізований"); }
+}
+
+class AddChildCommand extends Command {
+    constructor(parent, child) {
+        super();
+        this.parent = parent;
+        this.child = child;
+    }
+
+    execute() {
+        this.parent.addChild(this.child);
+        console.log(`[Command]: Виконано - додано елемент <${this.child.tagName || 'Текст'}> до <${this.parent.tagName}>`);
+    }
+
+    undo() {
+        this.parent.removeChild();
+        console.log(`[Command]: Скасовано (Undo) - видалено останній елемент з <${this.parent.tagName}>`);
+    }
+}
+
+
 // Створюємо батьківський елемент - список <ul>
 const ul = new LightElementNode('ul', 'block', 'pair', ['list', 'list-dark']);
 
@@ -162,12 +192,27 @@ for (const node of ul) {
 
 console.log("\nВідвідувач: Підрахунок тегів");
 const counterVisitor = new TagCounterVisitor();
-
 ul.accept(counterVisitor);
 console.log(`Кількість знайдених тегів у дереві: ${counterVisitor.count}`);
 
-
 console.log("\nСтан: Приховуємо перший пункт списку");
 li1.setState(new HiddenState());
+console.log(ul.renderFull());
 
+console.log("\nКоманда: Додавання та скасування");
+// Створюємо новий елемент
+const li3 = new LightElementNode('li', 'block', 'pair');
+li3.addChild(new LightTextNode('Третій пункт списку (помилковий)'));
+
+// Створюємо команду додавання (ul - куди, li3 - що)
+const addCommand = new AddChildCommand(ul, li3);
+
+// Виконуємо команду
+addCommand.execute();
+console.log("Після додавання:");
+console.log(ul.renderFull());
+
+// Скасовуємо команду (відкочуємо додавання)
+addCommand.undo();
+console.log("\nПісля скасування (Undo):");
 console.log(ul.renderFull());
