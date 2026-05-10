@@ -2,6 +2,9 @@
 class LightNode {
     get outerHTML() { return ''; }
     get innerHTML() { return ''; }
+
+    // Метод для відвідувача (Visitor Pattern)
+    accept(visitor) {}
 }
 
 class LightTextNode extends LightNode {
@@ -12,6 +15,11 @@ class LightTextNode extends LightNode {
 
     get outerHTML() { return this.text; }
     get innerHTML() { return this.text; }
+
+    // Реалізація методу відвідувача
+    accept(visitor) {
+        visitor.visitTextNode(this);
+    }
 }
 
 class LightElementNode extends LightNode {
@@ -60,7 +68,7 @@ class LightElementNode extends LightNode {
     }
 
     // Ітератор
-    *[Symbol.iterator]() {
+    * [Symbol.iterator]() {
         yield this;
 
         for (const child of this.children) {
@@ -70,6 +78,30 @@ class LightElementNode extends LightNode {
                 yield child;
             }
         }
+    }
+
+    accept(visitor) {
+        visitor.visitElementNode(this);
+
+        // До дітей відправляємо того ж відвідувача
+        for (const child of this.children) {
+            child.accept(visitor);
+        }
+    }
+}
+
+    // Відвідувач
+class TagCounterVisitor {
+    constructor() {
+        this.count = 0;
+    }
+
+    visitElementNode(node) {
+        this.count++;
+    }
+
+    visitTextNode(node) {
+        // Нічо не робимо
     }
 }
 
@@ -89,10 +121,10 @@ ul.addChild(li1);
 ul.addChild(li2);
 
 // Виводимо результати у консоль
-console.log("\nШаблоний метод: згенерований HTML:");
+console.log("\nШаблоний метод: згенерований HTML");
 console.log(ul.renderFull());
 
-console.log("\nІтератор: всі вузли в дереві:");
+console.log("\nІтератор: всі вузли в дереві");
 for (const node of ul) {
     if (node instanceof LightElementNode) {
         console.log(`Знайшов тег: <${node.tagName}>`);
@@ -100,3 +132,9 @@ for (const node of ul) {
         console.log(`Знайшов текст: "${node.text}"`);
     }
 }
+
+console.log("\nВідвідувач: Підрахунок тегів");
+const counterVisitor = new TagCounterVisitor();
+
+ul.accept(counterVisitor);
+console.log(`Кількість знайдених тегів у дереві: ${counterVisitor.count}`);
